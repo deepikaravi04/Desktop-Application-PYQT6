@@ -1,0 +1,77 @@
+import sys
+import threading
+from PyQt6.QtWidgets import QApplication, QMainWindow
+from PyQt6.uic import loadUi
+from flask import Flask, request
+from PyQt6.QtCore import QProcess
+from pyngrok import ngrok
+import requests
+
+# Flask application
+flask_app = Flask(__name__)
+
+@flask_app.route('/desktop_webhook', methods=['POST'])
+def handle_webhook():
+    payload = request.json
+    print(payload.get("symbol"))
+    print(payload.get("action"))
+    print("Received webhook payload:", payload)
+    return 'Webhook received successfully', 200
+
+def run_flask():
+    flask_app.run(port=8000)
+
+class MyWindow(QMainWindow):
+    endpoint_url = None
+    reserve_value = None
+    trade_value = None
+    risk_value = None
+    stock_lis = []
+
+    def __init__(self):
+        super().__init__()
+        loadUi('dashboardx.ui', self)
+        self.startButton.clicked.connect(self.run_functions)
+        self.stopButton.clicked.connect(self.stop_functions)
+
+    def run_functions(self):
+        self.run_script()
+        self.button_clicked()
+
+
+    def stop_functions(self):
+        ngrok.disconnect(self.endpoint_url)
+
+    def run_script(self):
+        tunnel = ngrok.connect(8000, "http")
+        self.endpoint_url = tunnel.public_url
+        print()
+        webhook_url = "http://3.87.76.198/endpoint_webhook"  
+        data = {
+            "username": "TEST", "desktop_url": self.endpoint_url
+        }
+        response = requests.post(webhook_url, json=data)
+        if response.status_code == 200:
+            print("Public URL sent to webhook successfully")
+        else:
+            print("Failed to send public URL to webhook")
+        print(self.endpoint_url)
+
+    def button_clicked(self):
+        self.reserve_value = self.reserveText.toPlainText()
+        self.trade_value = self.tradeText.toPlainText()
+        self.risk_value = self.riskText.toPlainText()
+        self.stock_lis.append(self.stockOneText.toPlainText())
+        self.stock_lis.append(self.stockTwoText.toPlainText())
+        self.stock_lis.append(self.stockThreeText.toPlainText())
+        self.stock_lis.append(self.stockFourText.toPlainText())
+        print("Button clicked!")
+        print(self.stock_lis)
+
+if __name__ == "__main__":
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.start()
+    app = QApplication(sys.argv)
+    window = MyWindow()
+    window.show()
+    sys.exit(app.exec())
