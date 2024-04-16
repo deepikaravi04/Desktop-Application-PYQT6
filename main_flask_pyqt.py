@@ -6,41 +6,50 @@ from flask import Flask, request
 from PyQt6.QtCore import QProcess
 from pyngrok import ngrok
 import requests
+from ib_insync import *
+import asyncio
 
-# Flask application
-flask_app = Flask(__name__)
 
-@flask_app.route('/desktop_webhook', methods=['POST'])
-def handle_webhook():
-    payload = request.json
-    print(payload.get("symbol"))
-    print(payload.get("action"))
-    print("Received webhook payload:", payload)
-    return 'Webhook received successfully', 200
+ib = IB()
+ib.connect('127.0.0.1', 7497, clientId=2)
+async def place_order(ib, symbol, quantity, action):
+    if ib.isConnected():
+        contract = Stock(symbol, 'SMART', 'USD')  
+        order = MarketOrder(action, quantity)
+        trade = ib.placeOrder(contract, order)
+        print("Order placed:", trade)
+    else:
+        print("Not connected to IB API. Cannot place order.")
+
+
 
 def run_flask():
     flask_app.run(port=8000)
 
 class MyWindow(QMainWindow):
     endpoint_url = None
-    reserve_value = None
-    trade_value = None
-    risk_value = None
-    stock_lis = []
+    
+    global stock_lis  
 
     def __init__(self):
+        self.reserve_value = None
+        self.trade_value = None
+        self.risk_value = None
         super().__init__()
         loadUi('dashboardx.ui', self)
         self.startButton.clicked.connect(self.run_functions)
         self.stopButton.clicked.connect(self.stop_functions)
 
     def run_functions(self):
-        self.run_script()
+        # self.run_script()
         self.button_clicked()
+        self.place_order_tradex()
 
 
     def stop_functions(self):
         ngrok.disconnect(self.endpoint_url)
+        ib.disconnect()
+        # flask_thread.stop()
 
     def run_script(self):
         tunnel = ngrok.connect(8000, "http")
@@ -61,12 +70,40 @@ class MyWindow(QMainWindow):
         self.reserve_value = self.reserveText.toPlainText()
         self.trade_value = self.tradeText.toPlainText()
         self.risk_value = self.riskText.toPlainText()
-        self.stock_lis.append(self.stockOneText.toPlainText())
-        self.stock_lis.append(self.stockTwoText.toPlainText())
-        self.stock_lis.append(self.stockThreeText.toPlainText())
-        self.stock_lis.append(self.stockFourText.toPlainText())
+        reserve_value = flask_app.config['reserve_value'] 
+        print("Reserve value:", reserve_value)
+        stock_lis.append(self.stockOneText.toPlainText())
+        stock_lis.append(self.stockTwoText.toPlainText())
+        stock_lis.append(self.stockThreeText.toPlainText())
+        stock_lis.append(self.stockFourText.toPlainText())
+        # Make sure to replace the IP and port with your TWS or Gateway settings
+
         print("Button clicked!")
-        print(self.stock_lis)
+        print(stock_lis)
+
+    def place_order_tradex(self):
+        return "success"
+
+
+
+flask_app = Flask(__name__)
+stock_lis = []
+@flask_app.route('/desktop_webhook', methods=['POST'])
+async def handle_webhook():
+    global stock_lis 
+    data = request.json 
+    print("Webhook received:", data)
+    symbol = data.get('symbol')
+    quantity = 1
+    action = data.get('action')
+    obj = MyWindow()
+    value2 = obj.reserve_value
+    print(value2)
+    asyncio.create_task(place_order(ib, symbol, quantity, action))
+    return 'Webhook received successfully', 200
+
+
+
 
 if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask)
