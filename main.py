@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QApplication, QMainWindow
 from PyQt6.uic import loadUi
 from flask import Flask, request
 from PyQt6.QtCore import QProcess
+from PyQt6.QtCore import QTimer
 from pyngrok import ngrok
 import requests
 from ib_insync import *
@@ -49,6 +50,24 @@ async def handle_webhook():
 def run_flask():
     flask_app.run(port=8000)
 
+class FlashScreen(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        loadUi('splash_screen.ui', self)
+        self.show()
+
+        # Start a timer to close the flash screen after a delay
+        QTimer.singleShot(3000, self.closeFlashScreen)
+
+    def closeFlashScreen(self):
+        self.close()
+        # Proceed to open the main window
+        self.openMainWindow()
+
+    def openMainWindow(self):
+        main_window = MyWindow()
+        main_window.show()
+
 class MyWindow(QMainWindow):
     endpoint_url = None
     
@@ -56,7 +75,9 @@ class MyWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        
         loadUi('dashboardx.ui', self)
+        
         self.startButton.clicked.connect(self.run_functions)
         self.stopButton.clicked.connect(self.stop_functions)
 
@@ -106,13 +127,12 @@ class MyWindow(QMainWindow):
 
 
 
-
-
-
 if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.start()
     app = QApplication(sys.argv)
+    flash_screen = FlashScreen()
+    # app = QApplication(sys.argv)
     window = MyWindow()
     window.show()
     sys.exit(app.exec())

@@ -41,7 +41,7 @@ class MyWindow(QMainWindow):
         self.stopButton.clicked.connect(self.stop_functions)
 
     def run_functions(self):
-        # self.run_script()
+        self.run_script()
         self.button_clicked()
         self.place_order_tradex()
 
@@ -76,8 +76,6 @@ class MyWindow(QMainWindow):
         stock_lis.append(self.stockTwoText.toPlainText())
         stock_lis.append(self.stockThreeText.toPlainText())
         stock_lis.append(self.stockFourText.toPlainText())
-        # Make sure to replace the IP and port with your TWS or Gateway settings
-
         print("Button clicked!")
         print(stock_lis)
 
@@ -101,8 +99,6 @@ async def handle_webhook():
     print(value2)
     asyncio.create_task(place_order(ib, symbol, quantity, action))
     return 'Webhook received successfully', 200
-
-
 
 
 if __name__ == "__main__":
