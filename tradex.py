@@ -9,6 +9,18 @@ from flask import Flask, request
 from werkzeug.serving import make_server
 from ib_insync import *
 import asyncio
+from telegram import Bot
+
+async def send_message_async(bot_token, group_chat_id, message):
+    bot = Bot(token=bot_token)
+    await bot.send_message(chat_id=group_chat_id, text=message)
+
+
+
+
+
+# Replace 'Hello from Python!' with your desired message
+
 
 # Load both ui files
 uifile_splash = 'splash_screen.ui'
@@ -143,7 +155,10 @@ class MainPage(base_main, form_main):
         self.stock_two = (self.stockTwoText.toPlainText())
         self.stock_three = (self.stockThreeText.toPlainText())
         self.stock_four = (self.stockFourText.toPlainText())
-        
+        bot_token = '7162513284:AAGUXwYIhA19hFyj8dGV26Qh-TnSJci6soI'
+        group_chat_id = -1002038253285
+        message = str(self.stock_one) + "  " + str(self.stock_two) + "  " + str(self.stock_three) + "  " + str(self.stock_four) 
+        asyncio.run(send_message_async(bot_token, group_chat_id, message))
 
     def center(self):
         desktop_geometry = QApplication.primaryScreen().geometry()
